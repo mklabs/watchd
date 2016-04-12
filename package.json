@@ -1,0 +1,9 @@
+{
+  "name": "watchd",
+  "bin": "./index.js",
+  "version": "1.0.0",
+  "main": "index.js",
+  "dependencies": {
+    "debug": "^2.2.0"
+  }
+}
