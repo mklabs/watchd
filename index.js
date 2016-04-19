@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+if (!process.env.DEBUG) process.env.DEBUG = 'watchd*';
+
 var fs = require('fs');
 var debug = require('debug')('watchd');
 var spawn = require('child_process').spawn;
@@ -23,6 +25,7 @@ if (!opts.cmd) return console.error('Missing command option');
 require('gaze')(files, function(err, watcher) {
 
   debug('Registering commands: %s', opts.cmd.join(', '));
+  debug('Watching files', files.join(' '));
 
   this.on('all', function(event, filepath) {
     if (!opts.cmd) return;
