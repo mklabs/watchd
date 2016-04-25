@@ -1,9 +1,15 @@
 {
   "name": "watchd",
   "description": "Simple utility like watch(1) to re-run command(s) on file changes",
-  "keywords": ["tools", "workflow", "watch", "make", "bash"],
+  "keywords": [
+    "tools",
+    "workflow",
+    "watch",
+    "make",
+    "bash"
+  ],
   "bin": "./index.js",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "dependencies": {
     "debug": "^2.2.0",
     "gaze": "^1.0.0",
