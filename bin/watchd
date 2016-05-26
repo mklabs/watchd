@@ -1,0 +1,9 @@
+#!/usr/bin/env node
+
+if (!process.env.DEBUG) process.env.DEBUG = 'watchd*';
+
+const minimist = require('minimist');
+const alias = { c: 'cmd', h: 'help', v: 'version' };
+
+let opts = minimist(process.argv.slice(2), { alias: alias });
+require('..')(opts);

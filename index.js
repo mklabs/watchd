@@ -1,52 +1,100 @@
-#!/usr/bin/env node
+const fs             = require('fs');
+const path           = require('path');
+const debug          = require('debug')('watchd');
+const spawn          = require('child_process').spawn;
+const mdeps          = require('module-deps');
+const JSONStream     = require('JSONStream');
+const builtinModules = require('builtin-modules');
 
-if (!process.env.DEBUG) process.env.DEBUG = 'watchd*';
+module.exports = run;
+run.lookup = lookup;
 
-var fs = require('fs');
-var debug = require('debug')('watchd');
-var spawn = require('child_process').spawn;
+function run(opts) {
+  opts = opts || {};
+  opts.cmd = Array.isArray(opts.cmd) ? opts.cmd : [opts.cmd];
 
-var alias = { c: 'cmd', h: 'help', v: 'version' };
+  var files = opts._;
+  if (opts.version) return console.log(require('./package.json').version);
 
-var opts = require('minimist')(process.argv.slice(2), { alias: alias });
-opts.cmd = Array.isArray(opts.cmd) ? opts.cmd : [opts.cmd];
+  if (opts.help) {
+    return fs.createReadStream(path.join(__dirname, 'usage.txt')).pipe(process.stdout);
+  }
 
-var files = opts._;
+  if (!opts.cmd) return console.error('Missing command option');
+  if (files.length) return gaze(files, opts);
 
-if (opts.version) return console.log(require('./package').version);
+  console.log('loook!');
+  lookup(path.resolve(), function(err, files) {
+    if (err) throw err;
+    console.log('files', files);
 
-if (opts.help) {
-  return fs.createReadStream('./readme.md').pipe(process.stdout);
+    gaze(files, opts);
+  });
 }
 
-if (!files.length) return console.error('Missing files argument');
-if (!opts.cmd) return console.error('Missing command option');
+function gaze(files, opts) {
+  require('gaze')(files, function(err, watcher) {
+    debug('Registering commands: %s', opts.cmd.join(', '));
+    debug('Watching files', files.join(' '));
 
-require('gaze')(files, function(err, watcher) {
+    this.on('all', function(event, filepath) {
+      if (!opts.cmd) return;
 
-  debug('Registering commands: %s', opts.cmd.join(', '));
-  debug('Watching files', files.join(' '));
+      debug(filepath + ' was ' + event);
 
-  this.on('all', function(event, filepath) {
-    if (!opts.cmd) return;
+      var cmds = opts.cmd.concat();
+      (function next(cmd) {
+        if (!cmd) return;
 
-    debug(filepath + ' was ' + event);
+        var command = cmd.split(' ')[0];
+        var args = cmd.split(' ').slice(1);
 
-    var cmds = opts.cmd.concat();
-    (function next(cmd) {
-      if (!cmd) return;
-
-      var command = cmd.split(' ')[0];
-      var args = cmd.split(' ').slice(1);
-
-      debug('`' + command + ' ' + args.join(' ') + '`');
-      spawn(command, args, { stdio: 'inherit' })
-        .on('error', function(err) {
-          console.error(err.stack);
-        })
-        .on('close', function() {
-          next(cmds.shift());
-        });
-    })(cmds.shift());
+        debug('`' + command + ' ' + args.join(' ') + '`');
+        spawn(command, args, { stdio: 'inherit' })
+          .on('error', function(err) {
+            console.error(err.stack);
+          })
+          .on('close', function() {
+            next(cmds.shift());
+          });
+      })(cmds.shift());
+    });
   });
-});
+}
+
+
+function lookup(dir, done) {
+  debug('Lookup files in %s', dir);
+  var filepath = require.resolve(dir);
+  debug('Resolved to %s', filepath);
+
+  let postFilter = (id, file, pkg) => {
+    let notCore = builtinModules.indexOf(id) === -1;
+    let notNodeModules = !/node_modules/.test(file);
+    // debug('filter', id, file, notCore, notNodeModules);
+    return notCore && notNodeModules;
+  };
+
+  let transform = ['babelify'];
+
+  var md = mdeps({ postFilter, transform  });
+  var files = [];
+  md.on('file', function(file) {
+    debug('module-deps found %s file', file);
+    files.push(file);
+  });
+
+  md.on('error', debug.bind(null, 'err'));
+  var to = setTimeout(() => {
+    debug('Timout error... module-deps never fired an end event');
+    done(null, files);
+  }, 5000);
+
+  md.pipe(JSONStream.stringify()).on('end', () => {
+    clearTimeout(to);
+    return done(null, files);
+  });
+
+  md.write(filepath);
+  md.end();
+}

@@ -1,0 +1,12 @@
+
+  $ watchd [files...] [options]
+
+    -h, --help          Show this help output
+    -v, --version       Show this help output
+    -c, --cmd           One or more commands to run on file changes
+
+  Examples:
+
+    $ watchd -c "npm test"
+    $ watchd -c "eslint ." -c "npm test"
+    $ watchd lib/*.js *.{js,json} -c "echo Hello" -c "echo World"
