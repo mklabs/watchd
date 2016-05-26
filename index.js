@@ -23,11 +23,8 @@ function run(opts) {
   if (!opts.cmd) return console.error('Missing command option');
   if (files.length) return gaze(files, opts);
 
-  console.log('loook!');
   lookup(path.resolve(), function(err, files) {
     if (err) throw err;
-    console.log('files', files);
-
     gaze(files, opts);
   });
 }
