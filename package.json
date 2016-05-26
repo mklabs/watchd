@@ -1,6 +1,6 @@
 {
   "name": "watchd",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Tiny wrapper around gaze / modules combo to re-run command(s) on file changes",
   "directories": {
     "bin": "bin",
